@@ -1,0 +1,7 @@
+#!/bin/bash
+# Describe the EBS Volumes attached to this instance
+
+source $(dirname $0)/../inc/ec2-include
+
+ec2-describe-volumes | grep -B1 $INSTANCE_ID
+echo

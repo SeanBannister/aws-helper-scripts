@@ -1,0 +1,114 @@
+#!/bin/bash
+# Unmount, and Detach an EBS Volume
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $1 ]; then
+  echo "Usage: $(basename $0) MOUNT_POINT"
+  echo
+  echo "      MOUNT_POINT - The mount location of the volume that you wish to detach. (E.g. /ebs)"
+  echo
+  exit
+fi
+
+# Check if the specified mount point exists
+if [ -d "$1" ]; then
+  # Unify mount point to ensure it will match the 'df' output
+  # For example ../mountpoint/ will become /mountpoint
+  MOUNT_POINT=$(cd "$1"; pwd)
+
+  # Find the device belonging to this mount point
+  DEVICE=(`df $MOUNT_POINT | grep " $MOUNT_POINT"`)
+  DEVICE=${DEVICE[0]}
+else
+  MOUNT_POINT=$1
+fi
+
+if [ $DEVICE ]; then
+  echo "Device location for '$MOUNT_POINT' is '$DEVICE'"
+  echo 
+
+else
+  echo "Warning: '$MOUNT_POINT' isn't currently mounted."
+  echo "         Type 'df' to list currently mounted devices."
+  echo
+  UNMOUNTED="true"
+
+  # Check /etc/fstab incase there's an entry for the device
+  echo "Checking /etc/fstab for an associated device..."
+  DEVICE=(`cat /etc/fstab | grep " $MOUNT_POINT "`);
+  DEVICE=${DEVICE[0]}
+
+  if [ $DEVICE ]; then
+    echo "Device location for '$MOUNT_POINT' is '$DEVICE'"
+    echo
+  else
+    echo "Error: Couldn't locate an associated device for '$MOUNT_POINT'"
+    echo
+    exit 1
+  fi
+fi
+
+# Find the Volume ID of the device
+echo "Locating EBS Volume ID..."
+VOLUME_ID=(`ec2-describe-volumes | grep $DEVICE | grep "attached"`)
+VOLUME_ID=${VOLUME_ID[1]}
+
+if [ ! $VOLUME_ID ]; then
+  echo "Error: We couldn't associate '$DEVICE' with an EBS Volume. Please ensure the device exists. "
+  echo "       Type 'ec2-describe-volumes' to list attached EBS Volumes and their device locations."
+else
+  echo "Volume ID is '$VOLUME_ID'"
+fi
+
+if [ ! $UNMOUNTED ]; then
+  # Unmount the EBS Volume
+  echo
+  echo "Unmounting device..."
+  umount $DEVICE
+  if [ ! $? = 0 ]; then
+    echo
+    echo "Error: Experienced problems while unmounting '$DEVICE'"
+    echo
+    exit 1
+  fi
+  echo
+fi
+
+# Remove the EBS Volume from /etc/fstab
+FSTAB_CONTENT=`grep " $MOUNT_POINT " /etc/fstab`;
+
+if [ "$FSTAB_CONTENT" ]; then
+  echo "Removing the following entries from fstab:"
+  echo "$FSTAB_CONTENT"
+  cp /etc/fstab /tmp/fstab.bak
+  grep -v " $MOUNT_POINT " /tmp/fstab.bak > /etc/fstab
+else
+  echo "No mount entries found in /etc/fstab"
+fi
+
+echo
+
+# Remove the crontab entry that performs EBS Snapshots for this Volume
+CRONTAB_CONTENT=`grep " i-create-snapshot $MOUNT_POINT " /etc/cron.d/ebs-snapshots`;
+
+if [ "$CRONTAB_CONTENT" ]; then
+  echo "Removing the following entries from the '/etc/cron.d/ebs-snapshots' crontab:"
+  echo "$CRONTAB_CONTENT"
+  cp /etc/cron.d/ebs-snapshots /tmp/ebs-snapshots.bak
+  grep -v " i-create-snapshot $MOUNT_POINT " /tmp/ebs-snapshots.bak > /etc/cron.d/ebs-snapshots
+else
+  echo "No cron entries fournd in /etc/cron.d/ebs-snapshots"
+fi
+
+echo
+
+# Detach the EBS Volume
+if [ "$VOLUME_ID" ]; then
+  echo "Detaching EBS Volume..."
+  ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID
+  echo
+fi
+
+echo "Please note the directory '$MOUNT_POINT' still exists but can be manually removed if unneeded."
+echo

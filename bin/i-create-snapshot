@@ -1,0 +1,65 @@
+#!/bin/bash
+# Lock MySQL tables if the EBS Volume is running MySQL, Freeze the Volume, Snapshot the Volume
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $1 ]; then
+  echo "Usage: $(basename $0) MOUNT_POINT MYSQL"
+  echo
+  echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
+  echo "            MYSQL - Does this EBS volume host mysql (true/false)?"
+  echo
+  exit
+fi
+
+MYSQL=$2
+
+if ! type ec2-consistent-snapshot >/dev/null 2>&1; then
+  echo "Error: Cannot find 'ec2-consistent-snapshot'. Installation details can be found at"
+  echo "       http://alestic.com/2009/09/ec2-consistent-snapshot"
+  echo
+  exit 1
+fi
+
+# Check if the specified mount point exists
+if [ -d "$1" ]; then
+  # Unify mount point to ensure it will match the 'df' output
+  # For example ../mountpoint/ will become /mountpoint
+  MOUNT_POINT=$(cd "$1"; pwd)
+
+  # Find the device belonging to this mount point
+  echo "Locating device location of '$MOUNT_POINT'..."
+  DEVICE=(`df $MOUNT_POINT | grep " $MOUNT_POINT"`)
+  DEVICE=${DEVICE[0]}
+else
+  MOUNT_POINT=$1
+fi
+
+if [ ! $DEVICE ]; then
+  echo "Warning: '$MOUNT_POINT' isn't currently mounted."
+  echo "         Type 'df' to list currently mounted devices."
+  echo
+else
+  echo "Device location for '$MOUNT_POINT' is '$DEVICE'"
+  echo 
+
+  # Find the Volume ID of the device
+  echo "Locating EBS Volume ID..."
+  VOLUME_ID=(`ec2-describe-volumes | grep $DEVICE | grep "attached"`)
+  VOLUME_ID=${VOLUME_ID[1]}
+
+  if [ ! $VOLUME_ID ]; then
+    echo "Error: We couldn't associate '$DEVICE' with an EBS Volume. Please ensure the device exists. "
+    echo "       Type 'ec2-describe-volumes' to list attached EBS Volumes and their device locations."
+  else
+    echo "Volume ID is '$VOLUME_ID'"
+    echo
+    echo "Snapshotting EBS Volume..."
+    REGION=${AVAILABILITY_ZONE%?}  # ec2-consistent-snapshot requires the Region rather than the Availability Zone so we remove the last character
+    if [ $MYSQL = "true" ]; then MYSQL_ARGUMENT="--mysql"; fi
+    ec2-consistent-snapshot $MYSQL_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id \
+      --aws-secret-access-key-file /root/.ec2/secret-access-key --xfs-filesystem $MOUNT_POINT $VOLUME_ID
+  fi
+fi
+
+echo

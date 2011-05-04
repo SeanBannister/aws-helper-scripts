@@ -1,0 +1,45 @@
+#!/bin/bash
+# Create an EBS Volume
+# Then call i-attach-volume to Attach, Format and Persistently Mount the EBS Volume
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $4 ]; then
+  echo "Usage: $(basename $0) DEVICE MOUNT_POINT SNAPSHOT SIZE"
+  echo
+  echo "           DEVICE - The device location on the EC2 instance that you would like the EBS volume attached to."
+  echo "                    Can be specified as 'auto' to automatically choose an available device."
+  echo "      MOUNT_POINT - The location you would like the EBS Volume mounted to. (E.g. /ebs)"
+  echo "         SNAPSHOT - The snapshot to base this EBS volume on. Can be specified as 'none'."
+  echo "             SIZE - The size of the EBS volumem. If using an existing snapshot specify 'auto' to use the snapshot size."
+  echo
+  exit
+fi
+
+DEVICE=$1
+MOUNT_POINT=$2
+SNAPSHOT=$3
+SIZE_ARGUMENT="--size $4";
+
+# Check if SNAPSHOT was specified and create volume from snapshot
+if [ $SNAPSHOT != "none" ]; then
+  SIZE_ARGUMENT="$SIZE_ARGUMENT --snapshot $SNAPSHOT";
+fi
+
+echo "Creating EBS Volume..."
+# Place output into array so we can parse the Volume ID
+OUTPUT=(`ec2-create-volume $SIZE_ARGUMENT --availability-zone $AVAILABILITY_ZONE`)
+
+# If ec2-create-volume exits with an error 
+if [ ! $? = 0 ]; then
+  echo
+  echo "Error: Experienced problems while creating EBS Volume"
+  echo
+  exit 1
+fi
+
+echo ${OUTPUT[*]}
+echo
+
+# Attach the EBS Volume that was just created
+i-attach-volume ${OUTPUT[1]} $DEVICE $MOUNT_POINT

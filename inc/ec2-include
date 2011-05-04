@@ -1,0 +1,14 @@
+# Check that Amazon EC2 API Tools are installed.
+if ! type ec2-version >/dev/null 2>&1; then
+  echo "Error: Cannot find Amazon EC2 API Tools please install from http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip"
+  echo "       and ensure the directory is in the servers path variable."
+  echo
+  exit 1
+fi
+
+CURL_META_DATA="curl --retry 3 --silent --show-error --fail -L http://169.254.169.254/2011-01-01"
+
+INSTANCE_ID=`$CURL_META_DATA/meta-data/instance-id`
+AVAILABILITY_ZONE=`$CURL_META_DATA/meta-data/placement/availability-zone`
+IP=`$CURL_META_DATA/meta-data/public-ipv4`
+

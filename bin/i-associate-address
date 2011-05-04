@@ -1,0 +1,38 @@
+#!/bin/bash
+# Associate an Elastic IP Address to an instance
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $1 ]; then
+  echo "Usage: $(basename $0) IP"
+  echo
+  echo "           IP - The elastic IP to attach to this instance. "
+  echo "                Specifying \"new\" will create a new IP and attach it to this instance. "
+  echo
+  exit
+fi
+
+IP=$1
+
+if [ $IP == "new" ]; then
+  echo "Creating IP Address..."
+  OUTPUT=(`ec2-allocate-address`)
+
+  # If ec2-allocate-address exits with an error
+  if [ ! $? = 0 ]; then
+    echo
+    echo "Error: Experienced problems while creating an Elastic IP address."
+    echo
+    exit 1
+  fi
+
+  echo ${OUTPUT[*]}
+  echo
+  echo "Attaching IP Address..."
+  ec2-associate-address -i $INSTANCE_ID ${OUTPUT[1]}
+else
+  echo "Attaching IP Address..."
+  ec2-associate-address -i $INSTANCE_ID $IP
+fi
+
+echo

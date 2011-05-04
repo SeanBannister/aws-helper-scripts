@@ -1,0 +1,101 @@
+#!/bin/bash
+# Clean Instance, Bundle Instance, Upload Bundle to S3, Register AMI
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $3 ]; then
+  echo "Usage: $(basename $0) BUCKET PREFIX CLEAN"
+  echo
+  echo "           BUCKET - The S3 bucket where the bundled AMI should be stored."
+  echo "           PREFIX - The filename prefix for bundled AMI files."
+  echo "            CLEAN - Should we clean potentially private data from this instance (true/false)?"
+  echo
+  exit
+fi
+
+BUCKET=$1
+PREFIX=$2
+CLEAN=$3
+ACCOUNT_NUMBER=`cat /root/.ec2/account-number`
+ACCESS_KEY_ID=`cat /root/.ec2/access-key-id`
+SECRET_ACCESS_KEY=`cat /root/.ec2/secret-access-key`
+
+if [ $(uname -m) = 'x86_64' ]; then
+  ARCH=x86_64
+else
+  ARCH=i386
+fi
+
+# For security reasons we remove any files from the instance that may contain sensitive information
+if [ ! $CLEAN = "false" ]; then
+  echo "Cleaning the instance ready for bundling..."
+  rm -f /root/.*hist* $HOME/.*hist*
+  rm -f /root/.my.cnf
+  rm -rf /root/.ec2
+  rm -f /root/.ssh/*
+  rm -f /var/log/*.gz
+  rm -f /var/ec2/*
+  find /var/log -name mysql -prune -o -type f -print | while read i; do sudo cp /dev/null $i; done
+fi
+
+# Remove any existing AMI bundles, and create a location for new AMI bundles
+echo
+if [ -d /mnt/ami ]; then
+  if [ "$(ls -A /mnt/ami)" ]; then   # Make sure there's files in the directory
+    echo "Removing existing AMI Bundle from /mnt/ami to avoid conflicts..."
+    rm /mnt/ami/*;
+  fi
+else
+  echo "Creating a location at /mnt/ami for the bundled instance..."
+  mkdir /mnt/ami
+fi
+
+# Bundle the instance
+echo
+echo "Bundling the instance..."
+sudo -E ec2-bundle-vol                      \
+  -r $ARCH                                  \
+  -d /mnt/ami                               \
+  -p $PREFIX                                \
+  -u $ACCOUNT_NUMBER                               \
+  -k /root/.ec2/pk.pem                      \
+  -c /root/.ec2/cert.pem                    \
+  -s 10240                                  \
+  --ec2cert /etc/ec2/amitools/cert-ec2.pem  \
+  -e /tmp,/mnt,/root/.ssh,/root/.ec2
+
+# If ec2-bundle-vol exits with an error
+if [ ! $? = 0 ]; then
+  echo
+  echo "Error: ec2-bundle-vol experienced problems while bundling AMI"
+  echo
+  exit 1
+fi
+
+# Upload bundle to an S3 Bucket
+echo
+echo "Uploading instance bundle to S3..."
+ec2-upload-bundle -b $BUCKET -m /mnt/ami/$PREFIX.manifest.xml -a $ACCESS_KEY_ID -s $SECRET_ACCESS_KEY
+
+# If ec2-upload-bundle exits with an error
+if [ ! $? = 0 ]; then
+  echo
+  echo "Error: ec2-upload-bundle experienced problems while uploading AMI to S3"
+  echo
+  exit 1
+fi
+
+# Register the AMI
+echo
+echo "Registering the AMI..."
+ec2-register $BUCKET/$PREFIX.manifest.xml
+
+# If ec2-register exits with an error
+if [ ! $? = 0 ]; then
+  echo
+  echo "Error: ec2-register experienced problems while registering the AMI"
+  echo
+  exit 1
+fi
+
+echo
