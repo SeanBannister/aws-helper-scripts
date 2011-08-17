@@ -16,7 +16,7 @@ IP=$1
 
 if [ $IP == "new" ]; then
   echo "Creating IP Address..."
-  OUTPUT=(`ec2-allocate-address`)
+  OUTPUT=$(ec2-allocate-address)
 
   # If ec2-allocate-address exits with an error
   if [ ! $? = 0 ]; then

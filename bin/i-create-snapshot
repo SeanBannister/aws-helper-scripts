@@ -29,7 +29,7 @@ if [ -d "$1" ]; then
 
   # Find the device belonging to this mount point
   echo "Locating device location of '$MOUNT_POINT'..."
-  DEVICE=(`df $MOUNT_POINT | grep " $MOUNT_POINT"`)
+  DEVICE=$(df $MOUNT_POINT | grep " $MOUNT_POINT")
   DEVICE=${DEVICE[0]}
 else
   MOUNT_POINT=$1
@@ -45,7 +45,7 @@ else
 
   # Find the Volume ID of the device
   echo "Locating EBS Volume ID..."
-  VOLUME_ID=(`ec2-describe-volumes | grep $DEVICE | grep "attached"`)
+  VOLUME_ID=$(ec2-describe-volumes | grep $DEVICE | grep "attached")
   VOLUME_ID=${VOLUME_ID[1]}
 
   if [ ! $VOLUME_ID ]; then

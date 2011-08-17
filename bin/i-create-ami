@@ -16,9 +16,9 @@ fi
 BUCKET=$1
 PREFIX=$2
 CLEAN=$3
-ACCOUNT_NUMBER=`cat /root/.ec2/account-number`
-ACCESS_KEY_ID=`cat /root/.ec2/access-key-id`
-SECRET_ACCESS_KEY=`cat /root/.ec2/secret-access-key`
+ACCOUNT_NUMBER=$(cat /root/.ec2/account-number)
+ACCESS_KEY_ID=$(cat /root/.ec2/access-key-id)
+SECRET_ACCESS_KEY=$(cat /root/.ec2/secret-access-key)
 
 if [ $(uname -m) = 'x86_64' ]; then
   ARCH=x86_64

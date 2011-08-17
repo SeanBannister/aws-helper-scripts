@@ -18,7 +18,7 @@ if [ -d "$1" ]; then
   MOUNT_POINT=$(cd "$1"; pwd)
 
   # Find the device belonging to this mount point
-  DEVICE=(`df $MOUNT_POINT | grep " $MOUNT_POINT"`)
+  DEVICE=$(df $MOUNT_POINT | grep " $MOUNT_POINT")
   DEVICE=${DEVICE[0]}
 else
   MOUNT_POINT=$1
@@ -36,7 +36,7 @@ else
 
   # Check /etc/fstab incase there's an entry for the device
   echo "Checking /etc/fstab for an associated device..."
-  DEVICE=(`cat /etc/fstab | grep " $MOUNT_POINT "`);
+  DEVICE=$(cat /etc/fstab | grep " $MOUNT_POINT ");
   DEVICE=${DEVICE[0]}
 
   if [ $DEVICE ]; then
@@ -51,7 +51,7 @@ fi
 
 # Find the Volume ID of the device
 echo "Locating EBS Volume ID..."
-VOLUME_ID=(`ec2-describe-volumes | grep $DEVICE | grep "attached"`)
+VOLUME_ID=$(ec2-describe-volumes | grep $DEVICE | grep "attached")
 VOLUME_ID=${VOLUME_ID[1]}
 
 if [ ! $VOLUME_ID ]; then
@@ -76,7 +76,7 @@ if [ ! $UNMOUNTED ]; then
 fi
 
 # Remove the EBS Volume from /etc/fstab
-FSTAB_CONTENT=`grep " $MOUNT_POINT " /etc/fstab`;
+FSTAB_CONTENT=$(grep " $MOUNT_POINT " /etc/fstab);
 
 if [ "$FSTAB_CONTENT" ]; then
   echo "Removing the following entries from fstab:"
@@ -90,7 +90,7 @@ fi
 echo
 
 # Remove the crontab entry that performs EBS Snapshots for this Volume
-CRONTAB_CONTENT=`grep " i-create-snapshot $MOUNT_POINT " /etc/cron.d/ebs-snapshots`;
+CRONTAB_CONTENT=$(grep " i-create-snapshot $MOUNT_POINT " /etc/cron.d/ebs-snapshots);
 
 if [ "$CRONTAB_CONTENT" ]; then
   echo "Removing the following entries from the '/etc/cron.d/ebs-snapshots' crontab:"

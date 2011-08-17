@@ -11,7 +11,7 @@ fi
 
 CURL_META_DATA="curl --retry 3 --silent --show-error --fail -L http://169.254.169.254/2011-01-01"
 
-INSTANCE_ID=`$CURL_META_DATA/meta-data/instance-id`
-AVAILABILITY_ZONE=`$CURL_META_DATA/meta-data/placement/availability-zone`
-IP=`$CURL_META_DATA/meta-data/public-ipv4`
+INSTANCE_ID=$($CURL_META_DATA/meta-data/instance-id)
+AVAILABILITY_ZONE=$($CURL_META_DATA/meta-data/placement/availability-zone)
+IP=$($CURL_META_DATA/meta-data/public-ipv4)
 
