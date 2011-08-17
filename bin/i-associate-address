@@ -25,5 +25,3 @@ else
   echo "Attaching IP Address..."
   ec2-associate-address -i $INSTANCE_ID $IP
 fi
-
-echo

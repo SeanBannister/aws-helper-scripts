@@ -17,4 +17,3 @@ echo
 
 echo "Deleting EBS Volume..."
 ec2-delete-volume $VOLUME_ID
-echo

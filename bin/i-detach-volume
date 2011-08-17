@@ -105,4 +105,3 @@ if [ "$VOLUME_ID" ]; then
 fi
 
 echo "Please note the directory '$MOUNT_POINT' still exists but can be manually removed if unneeded."
-echo

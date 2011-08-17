@@ -61,5 +61,3 @@ else
       --aws-secret-access-key-file /root/.ec2/secret-access-key --xfs-filesystem $MOUNT_POINT $VOLUME_ID
   fi
 fi
-
-echo

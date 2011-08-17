@@ -4,4 +4,3 @@
 source $(dirname $0)/../inc/ec2-include
 
 ec2-describe-volumes | grep -B1 $INSTANCE_ID
-echo

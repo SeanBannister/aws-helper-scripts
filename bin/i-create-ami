@@ -73,5 +73,3 @@ ec2-upload-bundle -b $BUCKET -m /mnt/ami/$PREFIX.manifest.xml -a $ACCESS_KEY_ID 
 echo
 echo "Registering the AMI..."
 ec2-register $BUCKET/$PREFIX.manifest.xml
-
-echo
