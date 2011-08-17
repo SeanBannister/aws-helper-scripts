@@ -1,0 +1,117 @@
+#!/bin/bash
+# Stop the EC2 instance, Resize the EBS volume and reattch it, Start the EC2 instance and reassociate the original Elastic IP.
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $2 ]; then
+  echo "Usage: $(basename $0) INSTANCE_ID SIZE"
+  echo
+  echo "      INSTANCE_ID - The EC2 instance whose EBS volume you wish to resize."
+  echo "             SIZE - The new size for the EBS volume (In gigabytes)."
+  echo
+  exit
+fi
+
+instanceid=$1
+size=$2
+
+# Get the root EBS volume id for the remote EC2 instance
+oldvolumeid=$(ec2-describe-instances $instanceid | egrep "^BLOCKDEVICE./dev/sda1" | cut -f3)
+# Get the availability zone for the remote EC2 instance
+zone=$(ec2-describe-instances $instanceid | egrep ^INSTANCE | cut -f12)
+# Check if the instance has an elastic IP so we can reassociate it with the instance after we stop and start it
+ELASTIC_IP=$(ec2-describe-addresses | grep $instanceid | cut -f2)
+
+# If the server didn't have an elastic IP we need to get its regular IP
+if [ $ELASTIC_IP ]; then
+  INSTANCE_IP=$ELASTIC_IP
+else
+  INSTANCE_IP=$(ec2-describe-instances $instanceid | egrep "^INSTANCE.$instanceid" | cut -f4)
+fi
+
+echo "Logging into remote server ($INSTANCE_IP) to check the remote filesystem is ext..."
+FILESYSTEM=$(ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "df -T / | grep -v Filesystem" | awk '{ print $2 }')
+
+# Check the filesystem is ext3 ext4 etc.. we remove the last character 3 or 4 so the check works for multiple versions and future versions of the ext filesystem
+if [ ${FILESYSTEM%?} == "ext" ]; then
+  echo "The remote servers filesystem is $FILESYSTEM."
+  echo
+else
+  echo "Error: The remote servers filesystem is '$FILESYSTEM' but this script only supports resizing ext filesystems."
+  exit 1
+fi
+
+# Stop the instance
+echo "Stopping the remote EC2 instance ($instanceid)..."
+ec2-stop-instances $instanceid
+echo
+
+# Detach the original volume from the instance
+echo "Detaching the EBS volume ($oldvolumeid) from the EC2 instance..."
+while ! ec2-detach-volume $oldvolumeid; do sleep 1; done
+echo
+
+# Create a snapshot of the original volume
+echo "Create a snapshot of the EBS volume ($oldvolumeid)..."
+snapshotid=$(ec2-create-snapshot $oldvolumeid --description "Backup before resizing the EBS volume to $size GB" | cut -f2)
+while ec2-describe-snapshots $snapshotid | grep -q pending; do sleep 1; done
+echo
+
+# Set the tags on the EBS snapshot
+echo "Set tags on the EBS snapshot ($snapshotid)..."
+instancename=$(ec2-describe-tags --filter "resource-id=$instanceid" --filter "key=Name" | cut -f5)
+ec2-create-tags $snapshotid --tag "Name=$instancename" --tag "Type=root"
+echo
+
+# Create a new volume from the snapshot, specifying a larger size
+echo "Create a new volume from the EBS snapshot ($snapshotid) with the new size of $size GB..."
+newvolumeid=$(ec2-create-volume --availability-zone $zone --size $size --snapshot $snapshotid | cut -f2)
+echo
+
+# Set the tags on the EBS volume
+echo "Set tags on the EBS volume ($newvolumeid)..."
+ec2-create-tags $newvolumeid --tag "Name=$instancename" --tag "Type=root"
+echo
+
+# Attach the new volume to the instance
+echo "Attaching the new EBS volume ($newvolumeid) to the EC2 instance ($instanceid)..."
+ec2-attach-volume --instance $instanceid --device /dev/sda1 $newvolumeid
+while ! ec2-describe-volumes $newvolumeid | grep -q attached; do sleep 1; done
+echo
+
+# Start the instance
+echo "Start the EC2 instance ($instanceid)..."
+ec2-start-instances $instanceid
+while ! ec2-describe-instances $instanceid | grep -q running; do sleep 1; done
+echo
+
+# Get the IP of the EC2 instance
+INSTANCE_IP=$(ec2-describe-instances $instanceid | egrep "^INSTANCE.$instanceid" | cut -f4)
+
+# Even though the server says its running it sometimes takes a few seconds to get a route to host so we delay 5 seconds
+sleep 5 
+
+# Resize the root file system to fill the new EBS volume
+echo "Logging into the remote server ($INSTANCE_IP) to resize the root file system (/dev/xvda1) to fill the new EBS volume..."
+ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "sudo resize2fs /dev/xvda1 | df -h /"
+echo
+
+# If the instance originally had an Elastic IP attached
+if [ $ELASTIC_IP ]; then
+  # Associate the original Elastic IP
+  echo "Associating elastic IP ($ELASTIC_IP)..."
+  ec2-associate-address $ELASTIC_IP -i $instanceid
+  # Wait for the Elastic IP to associate
+  while ! ec2-describe-addresses | grep -q $instanceid; do sleep 1; done
+  echo
+  INSTANCE_IP=$ELASTIC_IP
+fi
+
+# Delete the old EBS volume
+echo "Deleting the old EBS volume..."
+ec2-delete-volume $oldvolumeid
+echo
+
+# Turn on delete-on-termination
+echo "Turning on delete-on-termination so that the new EBS volume will be deleted when the EC2 instance is terminated as is common with EC2 instances..."
+ec2-modify-instance-attribute --block-device-mapping  /dev/sda1=$newvolumeid::true $instanceid
