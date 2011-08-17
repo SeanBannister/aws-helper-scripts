@@ -66,12 +66,6 @@ if [ ! $UNMOUNTED ]; then
   echo
   echo "Unmounting device..."
   umount $DEVICE
-  if [ ! $? = 0 ]; then
-    echo
-    echo "Error: Experienced problems while unmounting '$DEVICE'"
-    echo
-    exit 1
-  fi
   echo
 fi
 

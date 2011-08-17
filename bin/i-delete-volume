@@ -13,13 +13,6 @@ fi
 
 source i-detach-volume $1
 
-if [ ! $? = 0 ]; then
-  echo
-  echo "Error: Experienced problems while unmounting '$DEVICE'"
-  echo
-  exit 1
-fi
-
 echo "Deleting EBS Volume..."
 ec2-delete-volume $VOLUME_ID
 echo
