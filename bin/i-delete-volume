@@ -11,7 +11,9 @@ if [ ! $1 ]; then
   exit
 fi
 
+echo "Detaching EBS Volume..."
 source i-detach-volume $1
+echo
 
 echo "Deleting EBS Volume..."
 ec2-delete-volume $VOLUME_ID
