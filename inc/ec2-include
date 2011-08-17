@@ -1,3 +1,6 @@
+# Exit the script if any command returns an error
+set -e
+
 # Check that Amazon EC2 API Tools are installed.
 if ! type ec2-version >/dev/null 2>&1; then
   echo "Error: Cannot find Amazon EC2 API Tools please install from http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip"
