@@ -30,14 +30,6 @@ echo "Creating EBS Volume..."
 # Place output into array so we can parse the Volume ID
 OUTPUT=$(ec2-create-volume $SIZE_ARGUMENT --availability-zone $AVAILABILITY_ZONE)
 
-# If ec2-create-volume exits with an error 
-if [ ! $? = 0 ]; then
-  echo
-  echo "Error: Experienced problems while creating EBS Volume"
-  echo
-  exit 1
-fi
-
 echo ${OUTPUT[*]}
 echo
 

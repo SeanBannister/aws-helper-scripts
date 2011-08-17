@@ -47,14 +47,6 @@ elif [ $VOLUME_ATTACHED ]; then
 else 
   echo "Attaching EBS Volume..."
   ec2-attach-volume $VOLUME_ID --instance $INSTANCE_ID --device $DEVICE
-
-  # If ec2-attach-volume exits with an error then exit script
-  if [ ! $? = 0 ]; then
-    echo "Error: Experienced problems while attaching EBS Volume."
-    echo
-    exit 1
-  fi
-
   echo
   # Wait for the volume to be attached before we format and mount it
   while [ ! -e $DEVICE ]; do sleep 1; done

@@ -64,38 +64,14 @@ sudo -E ec2-bundle-vol                      \
   --ec2cert /etc/ec2/amitools/cert-ec2.pem  \
   -e /tmp,/mnt,/root/.ssh,/root/.ec2
 
-# If ec2-bundle-vol exits with an error
-if [ ! $? = 0 ]; then
-  echo
-  echo "Error: ec2-bundle-vol experienced problems while bundling AMI"
-  echo
-  exit 1
-fi
-
 # Upload bundle to an S3 Bucket
 echo
 echo "Uploading instance bundle to S3..."
 ec2-upload-bundle -b $BUCKET -m /mnt/ami/$PREFIX.manifest.xml -a $ACCESS_KEY_ID -s $SECRET_ACCESS_KEY
 
-# If ec2-upload-bundle exits with an error
-if [ ! $? = 0 ]; then
-  echo
-  echo "Error: ec2-upload-bundle experienced problems while uploading AMI to S3"
-  echo
-  exit 1
-fi
-
 # Register the AMI
 echo
 echo "Registering the AMI..."
 ec2-register $BUCKET/$PREFIX.manifest.xml
-
-# If ec2-register exits with an error
-if [ ! $? = 0 ]; then
-  echo
-  echo "Error: ec2-register experienced problems while registering the AMI"
-  echo
-  exit 1
-fi
 
 echo
