@@ -25,3 +25,6 @@ else
   echo "Attaching IP Address..."
   ec2-associate-address -i $INSTANCE_ID $IP
 fi
+
+# Make the script wait until the network connection is back up before we continue.
+perl -MIO::Socket::INET -e 'until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for network connection after associating an Elastic IP...\n";sleep 1}'
