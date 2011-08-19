@@ -1,0 +1,33 @@
+#!/bin/bash
+# Set the hostname of an instance
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $1 ]; then
+  echo "Usage: $(basename $0) IP"
+  echo
+  echo "     HOSTNAME - A list of hostnames to associate to this instance seperated by a space."
+  echo "                The first hostname on the line will be treated as the main hostname and placed"
+  echo "                in /etc/hostname, it and subsequent hostnames will be placed in /etc/hosts."
+  echo
+  exit
+fi
+
+hostnames=( $* )
+
+echo "Setting main hostname in /etc/hostname..."
+echo ${hostnames[0]} > /etc/hostname
+echo
+
+echo "Setting hostnames in /etc/hosts..."
+echo -e "\n# Hosts added by EC2 user-data" >> /etc/hosts
+echo "127.0.0.1 ${hostnames[*]}" >> /etc/hosts
+echo
+
+echo "Loading the hostname changes..."
+hostname -F /etc/hostname
+echo
+
+echo "Keep in mind this doesn't set a Reverse DNS Record, for that you will need an Elastic IP and fill out the form at:"
+echo "https://aws-portal.amazon.com/gp/aws/html-forms-controller/contactus/ec2-email-limit-rdns-request"
+echo "Also if you had existing hostnames set in /etc/hosts you may want to remove them to keep the file clean."
