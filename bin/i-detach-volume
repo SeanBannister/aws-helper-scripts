@@ -7,7 +7,6 @@ if [ ! $1 ]; then
   echo "Usage: $(basename $0) MOUNT_POINT"
   echo
   echo "      MOUNT_POINT - The mount location of the volume that you wish to detach. (E.g. /ebs)"
-  echo
   exit
 fi
 
@@ -18,7 +17,7 @@ if [ -d "$1" ]; then
   MOUNT_POINT=$(cd "$1"; pwd)
 
   # Find the device belonging to this mount point
-  DEVICE=$(df $MOUNT_POINT | grep " $MOUNT_POINT")
+  DEVICE=( $(df $MOUNT_POINT | grep " $MOUNT_POINT") )
   DEVICE=${DEVICE[0]}
 else
   MOUNT_POINT=$1
@@ -36,7 +35,7 @@ else
 
   # Check /etc/fstab incase there's an entry for the device
   echo "Checking /etc/fstab for an associated device..."
-  DEVICE=$(cat /etc/fstab | grep " $MOUNT_POINT ");
+  DEVICE=( $(cat /etc/fstab | grep " $MOUNT_POINT ") )
   DEVICE=${DEVICE[0]}
 
   if [ $DEVICE ]; then
@@ -51,11 +50,11 @@ fi
 
 # Find the Volume ID of the device
 echo "Locating EBS Volume ID..."
-VOLUME_ID=$(ec2-describe-volumes | grep $DEVICE | grep "attached")
+VOLUME_ID=( $(ec2-describe-volumes | grep "ATTACHMENT" | grep /dev/sdk${DEVICE: -1} | grep "attached") )
 VOLUME_ID=${VOLUME_ID[1]}
 
 if [ ! $VOLUME_ID ]; then
-  echo "Error: We couldn't associate '$DEVICE' with an EBS Volume. Please ensure the device exists. "
+  echo "Error: We couldn't associate '/dev/sdk${DEVICE: -1}' with an EBS Volume. Please ensure the device exists. "
   echo "       Type 'ec2-describe-volumes' to list attached EBS Volumes and their device locations."
 else
   echo "Volume ID is '$VOLUME_ID'"
@@ -101,7 +100,9 @@ echo
 if [ "$VOLUME_ID" ]; then
   echo "Detaching EBS Volume..."
   ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID
+  # Wait for EBS volume to detach before doing anything else
+  while ! ec2-detach-volume $VOLUME_ID; do sleep 1; done
   echo
 fi
 
-echo "Please note the directory '$MOUNT_POINT' still exists but can be manually removed if unneeded."
+echo -e "\E[31mPlease note the directory '$MOUNT_POINT' still exists but can be manually removed if unneeded.\033[0m"

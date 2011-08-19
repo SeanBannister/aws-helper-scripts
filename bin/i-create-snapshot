@@ -8,7 +8,6 @@ if [ ! $1 ]; then
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
   echo "            MYSQL - Does this EBS volume host mysql (true/false)?"
-  echo
   exit
 fi
 
@@ -29,7 +28,7 @@ if [ -d "$1" ]; then
 
   # Find the device belonging to this mount point
   echo "Locating device location of '$MOUNT_POINT'..."
-  DEVICE=$(df $MOUNT_POINT | grep " $MOUNT_POINT")
+  DEVICE=( $(df $MOUNT_POINT | grep " $MOUNT_POINT") )
   DEVICE=${DEVICE[0]}
 else
   MOUNT_POINT=$1
@@ -45,7 +44,7 @@ else
 
   # Find the Volume ID of the device
   echo "Locating EBS Volume ID..."
-  VOLUME_ID=$(ec2-describe-volumes | grep $DEVICE | grep "attached")
+  VOLUME_ID=( $(ec2-describe-volumes | grep $DEVICE | grep "attached") )
   VOLUME_ID=${VOLUME_ID[1]}
 
   if [ ! $VOLUME_ID ]; then
@@ -58,6 +57,6 @@ else
     REGION=${AVAILABILITY_ZONE%?}  # ec2-consistent-snapshot requires the Region rather than the Availability Zone so we remove the last character
     if [ $MYSQL = "true" ]; then MYSQL_ARGUMENT="--mysql"; fi
     ec2-consistent-snapshot $MYSQL_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id \
-      --aws-secret-access-key-file /root/.ec2/secret-access-key --xfs-filesystem $MOUNT_POINT $VOLUME_ID
+      --aws-secret-access-key-file /root/.ec2/secret-access-key --freeze-filesystem $MOUNT_POINT $VOLUME_ID
   fi
 fi

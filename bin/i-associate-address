@@ -8,7 +8,6 @@ if [ ! $1 ]; then
   echo
   echo "           IP - The elastic IP to attach to this instance. "
   echo "                Specifying \"new\" will create a new IP and attach it to this instance. "
-  echo
   exit
 fi
 
@@ -16,7 +15,7 @@ IP=$1
 
 if [ $IP == "new" ]; then
   echo "Creating IP Address..."
-  OUTPUT=$(ec2-allocate-address)
+  OUTPUT=( $(ec2-allocate-address) )
   echo ${OUTPUT[*]}
   echo
   echo "Attaching IP Address..."

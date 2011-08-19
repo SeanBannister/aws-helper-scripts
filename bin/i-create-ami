@@ -9,7 +9,6 @@ if [ ! $3 ]; then
   echo "           BUCKET - The S3 bucket where the bundled AMI should be stored."
   echo "           PREFIX - The filename prefix for bundled AMI files."
   echo "            CLEAN - Should we clean potentially private data from this instance (true/false)?"
-  echo
   exit
 fi
 
@@ -57,7 +56,7 @@ sudo -E ec2-bundle-vol                      \
   -r $ARCH                                  \
   -d /mnt/ami                               \
   -p $PREFIX                                \
-  -u $ACCOUNT_NUMBER                               \
+  -u $ACCOUNT_NUMBER                        \
   -k /root/.ec2/pk.pem                      \
   -c /root/.ec2/cert.pem                    \
   -s 10240                                  \

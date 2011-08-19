@@ -12,7 +12,6 @@ if [ ! $4 ]; then
   echo "      MOUNT_POINT - The location you would like the EBS Volume mounted to. (E.g. /ebs)"
   echo "         SNAPSHOT - The snapshot to base this EBS volume on. Can be specified as 'none'."
   echo "             SIZE - The size of the EBS volumem. If using an existing snapshot specify 'auto' to use the snapshot size."
-  echo
   exit
 fi
 
@@ -21,6 +20,14 @@ MOUNT_POINT=$2
 SNAPSHOT=$3
 SIZE_ARGUMENT="--size $4";
 
+if [ -d "$MOUNT_POINT" ]; then
+  echo "Warning: The mount point you specified ($MOUNT_POINT) already contains a directory"
+  echo "         please ensure an EBS volume isn't already mounted at that location by checking"
+  echo "         the output of the 'df' command. Otherwise if the directory is empty remove"
+  echo "         it and try reattaching this EBS volume."
+  exit 1
+fi
+
 # Check if SNAPSHOT was specified and create volume from snapshot
 if [ $SNAPSHOT != "none" ]; then
   SIZE_ARGUMENT="$SIZE_ARGUMENT --snapshot $SNAPSHOT";
@@ -28,8 +35,7 @@ fi
 
 echo "Creating EBS Volume..."
 # Place output into array so we can parse the Volume ID
-OUTPUT=$(ec2-create-volume $SIZE_ARGUMENT --availability-zone $AVAILABILITY_ZONE)
-
+OUTPUT=( $(ec2-create-volume $SIZE_ARGUMENT --availability-zone $AVAILABILITY_ZONE) )
 echo ${OUTPUT[*]}
 echo
 

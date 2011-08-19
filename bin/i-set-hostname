@@ -9,7 +9,6 @@ if [ ! $1 ]; then
   echo "     HOSTNAME - A list of hostnames to associate to this instance seperated by a space."
   echo "                The first hostname on the line will be treated as the main hostname and placed"
   echo "                in /etc/hostname, it and subsequent hostnames will be placed in /etc/hosts."
-  echo
   exit
 fi
 
@@ -28,6 +27,7 @@ echo "Loading the hostname changes..."
 hostname -F /etc/hostname
 echo
 
-echo "Keep in mind this doesn't set a Reverse DNS Record, for that you will need an Elastic IP and fill out the form at:"
-echo "https://aws-portal.amazon.com/gp/aws/html-forms-controller/contactus/ec2-email-limit-rdns-request"
-echo "Also if you had existing hostnames set in /etc/hosts you may want to remove them to keep the file clean."
+echo -e "\E[31mKeep in mind this doesn't set a Reverse DNS Record, for that you will need an Elastic IP, then fill out the form at:\033[0m"
+echo -e "\E[31mhttps://aws-portal.amazon.com/gp/aws/html-forms-controller/contactus/ec2-email-limit-rdns-request\033[0m"
+echo
+echo -e "\E[31mIf you had existing hostnames set in /etc/hosts you may want to remove them to keep the file clean.\033[0m"

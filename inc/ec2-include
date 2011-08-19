@@ -1,5 +1,5 @@
 # Exit the script if any command returns an error
-set -e
+#set -e
 
 # Check that Amazon EC2 API Tools are installed.
 if ! type ec2-version >/dev/null 2>&1; then

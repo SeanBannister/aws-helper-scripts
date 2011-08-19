@@ -8,7 +8,6 @@ if [ ! $2 ]; then
   echo
   echo "      INSTANCE_ID - The EC2 instance whose EBS volume you wish to resize."
   echo "             SIZE - The new size for the EBS volume (In gigabytes)."
-  echo
   exit
 fi
 

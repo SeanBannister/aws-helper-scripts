@@ -1,6 +1,5 @@
 #!/bin/bash
 # Attach, Format and Persistently Mount an EBS Volume
-
 source $(dirname $0)/../inc/ec2-include
 
 if [ ! $3 ]; then
@@ -10,7 +9,6 @@ if [ ! $3 ]; then
   echo "           DEVICE - The device location on the EC2 instance that you would like the EBS volume attached to."
   echo "                    Can be specified as 'auto' to automatically choose an available device."
   echo "      MOUNT_POINT - The location you would like the EBS Volume mounted to. (E.g. /ebs)"
-  echo 
   exit
 fi
 
@@ -18,49 +16,62 @@ VOLUME_ID=$1
 DEVICE=$2
 MOUNT_POINT=$3
 
+if [ -d "$MOUNT_POINT" ]; then
+  echo "Warning: The mount point you specified ($MOUNT_POINT) already contains a directory"
+  echo "         please ensure an EBS volume isn't already mounted at that location by checking"
+  echo "         the output of the 'df' command. Otherwise if the directory is empty remove"
+  echo "         it and try reattaching this EBS volume."
+  exit 1
+fi
+
+# Tag this EBS volume
+echo "Adding tags to the EBS volume..."
+INSTANCE_NAME=$(ec2-describe-tags --filter "resource-id=$INSTANCE_ID" --filter "key=Name" | cut -f5)
+ec2-create-tags $VOLUME_ID --tag "Name=$INSTANCE_NAME" --tag "Type=secondary"
+echo
+
 # If the user specified auto we locate the next avaliable device location
 if [ $DEVICE = "auto" ]; then
-  if ls /dev/sdk* >/dev/null 2>&1; then
-    LAST_DEVICE_NUMBER=$(ls -1 /dev/sdk* | sed 's/[a-z\/]//g' | sort -n | tail -1)
+  if ls /dev/xvdk* >/dev/null 2>&1; then
+    LAST_DEVICE_NUMBER=$(ls -1 /dev/xvdk* | sed 's/[a-z\/]//g' | sort -n | tail -1)
     DEVICE_NUMBER=$(expr $LAST_DEVICE_NUMBER + 1)
-    DEVICE=/dev/sdk$DEVICE_NUMBER
   else
-    DEVICE=/dev/sdk1
+    DEVICE_NUMBER="1"
   fi
 fi
 
 # Check if volume is already attached to an instance
-VOLUME_ATTACHED=$(ec2-describe-volumes $VOLUME_ID | grep "attached")
+VOLUME_ATTACHED=( $(ec2-describe-volumes $VOLUME_ID | grep "attached") )
 VOLUME_ATTACHED=${VOLUME_ATTACHED[2]}
 
 # Check if volume is attached to this instance 
 if [ "$VOLUME_ATTACHED" = "$INSTANCE_ID" ]; then
-  echo "Volume is already atached to this instance..."
+  echo "Error: Volume is already atached to this instance."
+  exit 1
 
 # Check if volume ia attached to another instance
 elif [ $VOLUME_ATTACHED ]; then
   echo "Error: Volume is already attached to $VOLUME_ATTACHED"
-  echo
   exit 1
 
 # Attach volume
 else 
   echo "Attaching EBS Volume..."
-  ec2-attach-volume $VOLUME_ID --instance $INSTANCE_ID --device $DEVICE
+  ec2-attach-volume $VOLUME_ID --instance $INSTANCE_ID --device /dev/sdk$DEVICE_NUMBER
   echo
   # Wait for the volume to be attached before we format and mount it
-  while [ ! -e $DEVICE ]; do sleep 1; done
+  while [ ! -e /dev/xvdk$DEVICE_NUMBER ]; do sleep 1; done
 fi
 
 echo "Formatting device with XFS file system..."
-mkfs.xfs $DEVICE
+mkfs.xfs /dev/xvdk$DEVICE_NUMBER
 echo
 
 # Remove the EBS Volume from /etc/fstab
 FSTAB_CONTENT=$(grep " $MOUNT_POINT " /etc/fstab);
 
 if [ "$FSTAB_CONTENT" ]; then
-  echo "Found an old entry for this device in fstab. Removing:"
+  echo "Found an old entry for this device in '/etc/fstab'. Removing:"
   echo "$FSTAB_CONTENT"
   echo
   mv /etc/fstab /etc/fstab.bak
@@ -68,16 +79,15 @@ if [ "$FSTAB_CONTENT" ]; then
 fi
 
 # Mount the EBS Volume persistantly
-echo "Adding mount point '$MOUNT_POINT' to fstab..."
+echo "Adding mount point '$MOUNT_POINT' to '/etc/fstab'..."
+echo "/dev/xvdk$DEVICE_NUMBER $MOUNT_POINT xfs noatime 0 0" >> /etc/fstab
 echo
-echo "$DEVICE $MOUNT_POINT xfs noatime 0 0" >> /etc/fstab
 
 # Add cron entry to perform EBS Snapshots of this Volume
 echo "Adding cron entry for ec2-consistent-snapshot to '/etc/cron.d/ebs-snapshots'..."
-echo
 echo "30 4 * * * i-create-snapshot $MOUNT_POINT true" >> /etc/cron.d/ebs-snapshots
+echo
 
 echo "Creating mount point and mounting device..."
-echo
-if [ ! -d $MOUNT_POINT ]; then mkdir $MOUNT_POINT; fi
+if [ ! -d "$MOUNT_POINT" ]; then mkdir $MOUNT_POINT; fi
 mount $MOUNT_POINT
