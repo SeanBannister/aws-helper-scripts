@@ -11,7 +11,7 @@ if [ ! $4 ]; then
   echo "                    Can be specified as 'auto' to automatically choose an available device."
   echo "      MOUNT_POINT - The location you would like the EBS Volume mounted to. (E.g. /ebs)"
   echo "         SNAPSHOT - The snapshot to base this EBS volume on. Can be specified as 'none'."
-  echo "             SIZE - The size of the EBS volumem. If using an existing snapshot specify 'auto' to use the snapshot size."
+  echo "             SIZE - The size of the EBS volume. If using an existing snapshot specify 'auto' to use the snapshot size."
   exit
 fi
 
