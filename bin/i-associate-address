@@ -13,17 +13,34 @@ fi
 
 IP=$1
 
-if [ $IP == "new" ]; then
-  echo "Creating IP Address..."
-  OUTPUT=( $(ec2-allocate-address) )
-  echo ${OUTPUT[*]}
-  echo
-  echo "Attaching IP Address..."
-  ec2-associate-address -i $INSTANCE_ID ${OUTPUT[1]}
+ATTACHED_IP=( $(i-describe-address) )
+
+# If an Elastic IP is already attached to this EC2 instance.
+if [ ! -z "${ATTACHED_IP[1]}" ]; then
+  echo "This EC2 instance already has an elastic IP (${ATTACHED_IP[1]}) associated."
+  echo "First disassociate it with 'i-disassociate-address'"
+  exit
 else
-  echo "Attaching IP Address..."
-  ec2-associate-address -i $INSTANCE_ID $IP
+  # If the user specified they want a new Elastic IP created
+  if [ $IP == "new" ]; then
+    echo "Creating IP Address..."
+    OUTPUT=( $(ec2-allocate-address) )
+    echo ${OUTPUT[*]}
+    IP=${OUTPUT[1]}
+    echo
+  else
+    # If the Elastic IP is associated to another EC2 instance
+    IPS_INSTANCE_ID=( $(ec2-describe-addresses | grep "ADDRESS" | grep $IP) )
+
+    if [ ! -z ${IPS_INSTANCE_ID[2]} ]; then
+      echo "That Elastic IP is already to another EC2 instance (${IPS_INSTANCE_ID[2]})."
+      exit
+    fi
+  fi
 fi
+
+echo "Attaching IP Address..."
+ec2-associate-address -i $INSTANCE_ID $IP
 
 # Make the script wait until the network connection is back up before we continue.
 perl -MIO::Socket::INET -e 'until(new IO::Socket::INET("169.254.169.254:80")){print"Waiting for network connection after associating an Elastic IP...\n";sleep 1}'
