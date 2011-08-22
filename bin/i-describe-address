@@ -1,0 +1,6 @@
+#!/bin/bash
+# Describe the Elastic IP attached to this instance
+
+source $(dirname $0)/../inc/ec2-include
+
+ec2-describe-addresses | grep "ADDRESS" | grep $INSTANCE_ID
