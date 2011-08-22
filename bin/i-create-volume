@@ -40,4 +40,5 @@ echo ${OUTPUT[*]}
 echo
 
 # Attach the EBS Volume that was just created
-i-attach-volume ${OUTPUT[1]} $DEVICE $MOUNT_POINT
+# The last value "true" is so i-attach-volume knows to format the drive if its just been created
+i-attach-volume ${OUTPUT[1]} $DEVICE $MOUNT_POINT true

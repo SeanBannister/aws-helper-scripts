@@ -4,7 +4,7 @@ source $(dirname $0)/../inc/ec2-include
 
 if [ ! $3 ]; then
   echo "Usage: $(basename $0) VOLUME_ID DEVICE MOUNT_POINT"
-  echo 
+  echo
   echo "        VOLUME_ID - The Volume ID of the EBS volume you'd like to attach to this ec2 instance."
   echo "           DEVICE - The device location on the EC2 instance that you would like the EBS volume attached to."
   echo "                    Can be specified as 'auto' to automatically choose an available device."
@@ -15,6 +15,7 @@ fi
 VOLUME_ID=$1
 DEVICE=$2
 MOUNT_POINT=$3
+FORMAT=$4 # This value is only parsed in when i-create-volume needs a drive attached.
 
 if [ -d "$MOUNT_POINT" ]; then
   echo "Warning: The mount point you specified ($MOUNT_POINT) already contains a directory"
@@ -44,18 +45,18 @@ fi
 VOLUME_ATTACHED=( $(ec2-describe-volumes $VOLUME_ID | grep "attached") )
 VOLUME_ATTACHED=${VOLUME_ATTACHED[2]}
 
-# Check if volume is attached to this instance 
+# Check if volume is attached to this instance
 if [ "$VOLUME_ATTACHED" = "$INSTANCE_ID" ]; then
   echo "Error: Volume is already atached to this instance."
   exit 1
 
-# Check if volume ia attached to another instance
+# Check if volume is attached to another instance
 elif [ $VOLUME_ATTACHED ]; then
   echo "Error: Volume is already attached to $VOLUME_ATTACHED"
   exit 1
 
 # Attach volume
-else 
+else
   echo "Attaching EBS Volume..."
   ec2-attach-volume $VOLUME_ID --instance $INSTANCE_ID --device /dev/sdk$DEVICE_NUMBER
   echo
@@ -63,9 +64,11 @@ else
   while [ ! -e /dev/xvdk$DEVICE_NUMBER ]; do sleep 1; done
 fi
 
-echo "Formatting device with XFS file system..."
-mkfs.xfs /dev/xvdk$DEVICE_NUMBER
-echo
+if [ "$FORMAT" == "true" ]; then
+  echo "Formatting the device with an Ext4 filesystem..."
+  mkfs.ext4 /dev/xvdk$DEVICE_NUMBER
+  echo
+fi
 
 # Remove the EBS Volume from /etc/fstab
 FSTAB_CONTENT=$(grep " $MOUNT_POINT " /etc/fstab);
@@ -80,7 +83,7 @@ fi
 
 # Mount the EBS Volume persistantly
 echo "Adding mount point '$MOUNT_POINT' to '/etc/fstab'..."
-echo "/dev/xvdk$DEVICE_NUMBER $MOUNT_POINT xfs noatime 0 0" >> /etc/fstab
+echo "/dev/xvdk$DEVICE_NUMBER $MOUNT_POINT ext4 noatime 0 0" >> /etc/fstab
 echo
 
 # Add cron entry to perform EBS Snapshots of this Volume
