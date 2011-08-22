@@ -4,7 +4,7 @@
 source $(dirname $0)/../inc/ec2-include
 
 if [ ! $1 ]; then
-  echo "Usage: $(basename $0) MOUNT_POINT MYSQL FREEZE"
+  echo "Usage: $(basename $0) MOUNT_POINT MYSQL FREEZE SHORT_DESCRIPTION LONG_DESCRIPTION"
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
   echo "            MYSQL - Does this EBS volume host mysql (true/false)?"
@@ -17,6 +17,7 @@ fi
 
 MYSQL=$2
 FREEZE=$3
+# The reason we have a short description and a long description is because the short description is added as a tag and is therefore filterable in the AWS management console. The long description is added as the default description for the snapshot as snapshots have a description parameter.
 SHORT_DESCRIPTION=$4
 LONG_DESCRIPTION=$5
 
