@@ -4,14 +4,21 @@
 source $(dirname $0)/../inc/ec2-include
 
 if [ ! $1 ]; then
-  echo "Usage: $(basename $0) MOUNT_POINT MYSQL"
+  echo "Usage: $(basename $0) MOUNT_POINT MYSQL FREEZE"
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
   echo "            MYSQL - Does this EBS volume host mysql (true/false)?"
+  echo "           FREEZE - Should this EBS volume be frozen before snapshotting (true/false)?"?
+  echo "                    You should never freeze the root filesystem."
+  echo "SHORT_DESCRIPTION - A short description which will be added as a tag to the snapshot. (optional)"
+  echo " LONG_DESCRIPTION - A long description added as the description of the snapshot. (optional)"
   exit
 fi
 
 MYSQL=$2
+FREEZE=$3
+SHORT_DESCRIPTION=$4
+LONG_DESCRIPTION=$5
 
 if ! type ec2-consistent-snapshot >/dev/null 2>&1; then
   echo "Error: Cannot find 'ec2-consistent-snapshot'. Installation details can be found at"
@@ -44,19 +51,28 @@ else
 
   # Find the Volume ID of the device
   echo "Locating EBS Volume ID..."
-  VOLUME_ID=( $(ec2-describe-volumes | grep $DEVICE | grep "attached") )
+  VOLUME_ID=( $(ec2-describe-volumes | grep "ATTACHMENT" | grep $INSTANCE_ID | grep /dev/sd${DEVICE: -2} | grep "attached") )
   VOLUME_ID=${VOLUME_ID[1]}
 
   if [ ! $VOLUME_ID ]; then
     echo "Error: We couldn't associate '$DEVICE' with an EBS Volume. Please ensure the device exists. "
     echo "       Type 'ec2-describe-volumes' to list attached EBS Volumes and their device locations."
+    exit
   else
     echo "Volume ID is '$VOLUME_ID'"
     echo
     echo "Snapshotting EBS Volume..."
     REGION=${AVAILABILITY_ZONE%?}  # ec2-consistent-snapshot requires the Region rather than the Availability Zone so we remove the last character
-    if [ $MYSQL = "true" ]; then MYSQL_ARGUMENT="--mysql"; fi
-    ec2-consistent-snapshot $MYSQL_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id \
-      --aws-secret-access-key-file /root/.ec2/secret-access-key --freeze-filesystem $MOUNT_POINT $VOLUME_ID
+    if [ "$MYSQL" = "true" ]; then MYSQL_ARGUMENT="--mysql"; fi
+    if [ "$FREEZE" = "true" ]; then FREEZE_ARGUMENT="--freeze-filesystem $MOUNT_POINT"; fi
+    if [ -z "$LONG_DESCRIPTION" ]; then LONG_DESCRIPTION="-"; fi
+    SNAPSHOT_ID=$(ec2-consistent-snapshot $MYSQL_ARGUMENT $FREEZE_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id --aws-secret-access-key-file /root/.ec2/secret-access-key --description "$LONG_DESCRIPTION" $VOLUME_ID)
+    echo "Snapshot ID is '$SNAPSHOT_ID'"
+    echo
+
+    echo "Tagging snapshot..."
+    TAG_NAME=( $(ec2-describe-tags | grep $VOLUME_ID | grep Name | cut -f5) )
+    TAG_TYPE=( $(ec2-describe-tags | grep $VOLUME_ID | grep Type | cut -f5) )
+    ec2-create-tags $SNAPSHOT_ID --tag "Name=$TAG_NAME" --tag "Type=$TAG_TYPE" --tag "Description=$SHORT_DESCRIPTION"
   fi
 fi
