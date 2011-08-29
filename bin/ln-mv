@@ -1,0 +1,33 @@
+#!/bin/bash
+# Move a directory to an EBS volume and symlink from the original location to the EBS location. If the EBS volume already contains the directory we're trying to move to it just delete the original directory and create a symlink.
+
+source $(dirname $0)/../inc/ec2-include
+
+if [ ! $1 ]; then
+  echo "Usage: $(basename $0) IP"
+  echo
+  echo "     LOCATION - The location of the original directory."
+  echo "  DESTINATION - The destination of the directory on an EBS volume."
+  exit
+fi
+
+
+MOVE_DATA_ARRAY=( ${MOVE_DATA[$i]} )
+LOCATION=$1
+DESTINATION=$2
+
+# If the destination directory already exists
+if [ -d $DESTINATION ]; then
+  echo "Removing $LOCATION..."
+  rm -rf $LOCATION
+  echo
+  echo "Creating a symolic link from $LOCATION to $DESTINATION..."
+  ln -s $DESTINATION $LOCATION
+else
+  echo "Moving $LOCATION to $DESTINATION..."
+  mkdir -p $(dirname $DESTINATION)   # Recursively create the required directory structure.
+  mv -f $LOCATION $DESTINATION
+  echo
+  echo "Creating a symolic link from $LOCATION to $DESTINATION..."
+  ln -s $DESTINATION $LOCATION
+fi
