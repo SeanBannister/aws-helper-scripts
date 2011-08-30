@@ -4,30 +4,38 @@
 source $(dirname $0)/../inc/ec2-include
 
 if [ ! $1 ]; then
-  echo "Usage: $(basename $0) IP"
+  echo "Usage: $(basename $0) TYPE LOCATION DESTINATION"
   echo
+  echo "         TYPE - Can either be 'symlink' to symlink LOCATION to DESTINATION or 'mount' to create the link"
+  echo "                using /etc/fstab. This allows us to bypass the problem Apparmor has with symlinks."
   echo "     LOCATION - The location of the original directory."
   echo "  DESTINATION - The destination of the directory on an EBS volume."
   exit
 fi
 
 
-MOVE_DATA_ARRAY=( ${MOVE_DATA[$i]} )
-LOCATION=$1
-DESTINATION=$2
+TYPE=$1
+LOCATION=$2
+DESTINATION=$3
 
 # If the destination directory already exists
 if [ -d $DESTINATION ]; then
   echo "Removing $LOCATION..."
   rm -rf $LOCATION
-  echo
-  echo "Creating a symolic link from $LOCATION to $DESTINATION..."
-  ln -s $DESTINATION $LOCATION
 else
   echo "Moving $LOCATION to $DESTINATION..."
   mkdir -p $(dirname $DESTINATION)   # Recursively create the required directory structure.
   mv -f $LOCATION $DESTINATION
-  echo
+fi
+
+echo
+
+if [ "$TYPE" = "symlink" ]; then
   echo "Creating a symolic link from $LOCATION to $DESTINATION..."
   ln -s $DESTINATION $LOCATION
+else 
+  echo "Creating a link using mount points from $LOCATION to $DESTINATION..."
+  echo "$DESTINATION $LOCATION none bind" >> /etc/fstab
+  mkdir $LOCATION
+  mount $LOCATION
 fi
