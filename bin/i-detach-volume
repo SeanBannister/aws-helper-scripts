@@ -83,13 +83,13 @@ fi
 echo
 
 # Remove the crontab entry that performs EBS Snapshots for this Volume
-CRONTAB_CONTENT=$(grep " i-snapshot-volume $MOUNT_POINT " /etc/cron.d/snapshot-ebs);
+CRONTAB_CONTENT=$(grep "i-snapshot-volume $MOUNT_POINT " /etc/cron.d/snapshot-ebs);
 
 if [ "$CRONTAB_CONTENT" ]; then
   echo "Removing the following entries from the '/etc/cron.d/snapshot-ebs' crontab:"
   echo "$CRONTAB_CONTENT"
-  cp /etc/cron.d/ebs-snapshots /tmp/ebs-snapshots.bak
-  grep -v " i-snapshot-volume $MOUNT_POINT " /tmp/ebs-snapshots.bak > /etc/cron.d/snapshot-ebs
+  cp /etc/cron.d/snapshot-ebs /tmp/ebs-snapshots.bak
+  grep -v "i-snapshot-volume $MOUNT_POINT " /tmp/ebs-snapshots.bak > /etc/cron.d/snapshot-ebs
 else
   echo "Cron entry wasn't found in /etc/cron.d/snapshot-ebs"
 fi
@@ -99,9 +99,8 @@ echo
 # Detach the EBS Volume
 if [ "$VOLUME_ID" ]; then
   echo "Detaching EBS Volume..."
-  ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID
   # Wait for EBS volume to detach before doing anything else
-  while ! ec2-detach-volume $VOLUME_ID; do sleep 1; done
+  while ! ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID; do sleep 1; done
   echo
 fi
 
