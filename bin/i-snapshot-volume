@@ -3,7 +3,7 @@
 
 source $(dirname $0)/../inc/ec2-include
 
-if [ ! $1 ]; then
+if [ ! $3 ]; then
   echo "Usage: $(basename $0) MOUNT_POINT MYSQL FREEZE SHORT_DESCRIPTION LONG_DESCRIPTION"
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"

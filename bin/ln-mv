@@ -3,7 +3,7 @@
 
 source $(dirname $0)/../inc/ec2-include
 
-if [ ! $1 ]; then
+if [ ! $3 ]; then
   echo "Usage: $(basename $0) TYPE LOCATION DESTINATION"
   echo
   echo "         TYPE - Can either be 'symlink' to symlink LOCATION to DESTINATION or 'mount' to create the link"
