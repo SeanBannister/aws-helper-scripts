@@ -83,15 +83,15 @@ fi
 echo
 
 # Remove the crontab entry that performs EBS Snapshots for this Volume
-CRONTAB_CONTENT=$(grep " i-create-snapshot $MOUNT_POINT " /etc/cron.d/ebs-snapshots);
+CRONTAB_CONTENT=$(grep " i-snapshot-volume $MOUNT_POINT " /etc/cron.d/snapshot-ebs);
 
 if [ "$CRONTAB_CONTENT" ]; then
-  echo "Removing the following entries from the '/etc/cron.d/ebs-snapshots' crontab:"
+  echo "Removing the following entries from the '/etc/cron.d/snapshot-ebs' crontab:"
   echo "$CRONTAB_CONTENT"
   cp /etc/cron.d/ebs-snapshots /tmp/ebs-snapshots.bak
-  grep -v " i-create-snapshot $MOUNT_POINT " /tmp/ebs-snapshots.bak > /etc/cron.d/ebs-snapshots
+  grep -v " i-snapshot-volume $MOUNT_POINT " /tmp/ebs-snapshots.bak > /etc/cron.d/snapshot-ebs
 else
-  echo "No cron entries fournd in /etc/cron.d/ebs-snapshots"
+  echo "Cron entry wasn't found in /etc/cron.d/snapshot-ebs"
 fi
 
 echo
