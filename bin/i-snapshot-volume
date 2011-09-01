@@ -4,10 +4,10 @@
 source $(dirname $0)/../inc/ec2-include
 
 if [ ! $3 ]; then
-  echo "Usage: $(basename $0) MOUNT_POINT MYSQL FREEZE SHORT_DESCRIPTION LONG_DESCRIPTION"
+  echo "Usage: $(basename $0) MOUNT_POINT DB FREEZE SHORT_DESCRIPTION LONG_DESCRIPTION"
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
-  echo "            MYSQL - Does this EBS volume host mysql (true/false)?"
+  echo "          DB_TYPE - The type of database on the EBS volume. Accepts 'mysql' or 'mongodb'."
   echo "           FREEZE - Should this EBS volume be frozen before snapshotting (true/false)?"?
   echo "                    You should never freeze the root filesystem."
   echo "SHORT_DESCRIPTION - A short description which will be added as a tag to the snapshot. (optional)"
@@ -15,7 +15,7 @@ if [ ! $3 ]; then
   exit
 fi
 
-MYSQL=$2
+DB_TYPE=$2
 FREEZE=$3
 # The reason we have a short description and a long description is because the short description is added as a tag and is therefore filterable in the AWS management console. The long description is added as the default description for the snapshot as snapshots have a description parameter.
 SHORT_DESCRIPTION=$4
@@ -64,10 +64,10 @@ else
     echo
     echo "Snapshotting EBS Volume..."
     REGION=${AVAILABILITY_ZONE%?}  # ec2-consistent-snapshot requires the Region rather than the Availability Zone so we remove the last character
-    if [ "$MYSQL" = "true" ]; then MYSQL_ARGUMENT="--mysql"; fi
+    if [ "$DB_TYPE" = "mysql" ]; then DB_ARGUMENT="--mysql"; fi
     if [ "$FREEZE" = "true" ]; then FREEZE_ARGUMENT="--freeze-filesystem $MOUNT_POINT"; fi
     if [ -z "$LONG_DESCRIPTION" ]; then LONG_DESCRIPTION="-"; fi
-    SNAPSHOT_ID=$(ec2-consistent-snapshot $MYSQL_ARGUMENT $FREEZE_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id --aws-secret-access-key-file /root/.ec2/secret-access-key --description "$LONG_DESCRIPTION" $VOLUME_ID)
+    SNAPSHOT_ID=$(ec2-consistent-snapshot $DB_ARGUMENT $FREEZE_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id --aws-secret-access-key-file /root/.ec2/secret-access-key --description "$LONG_DESCRIPTION" $VOLUME_ID)
     echo "Snapshot ID is '$SNAPSHOT_ID'"
     echo
 

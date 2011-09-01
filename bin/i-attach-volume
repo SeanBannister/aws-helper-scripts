@@ -88,7 +88,7 @@ echo
 
 # Add cron entry to perform EBS Snapshots of this Volume
 echo "Adding cron entry for ec2-consistent-snapshot to '/etc/cron.d/snapshot-ebs'..."
-echo "30 4 * * * root /usr/local/aws-helper-scripts/bin/i-snapshot-volume $MOUNT_POINT true true" >> /etc/cron.d/snapshot-ebs
+echo "30 * * * * root /usr/local/aws-helper-scripts/bin/i-snapshot-volume $MOUNT_POINT mysql true \"automated backup\"" >> /etc/cron.d/snapshot-ebs
 echo
 
 echo "Creating mount point and mounting device..."
