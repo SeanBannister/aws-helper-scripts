@@ -7,7 +7,7 @@ if [ ! $3 ]; then
   echo "Usage: $(basename $0) MOUNT_POINT DB FREEZE SHORT_DESCRIPTION LONG_DESCRIPTION"
   echo
   echo "      MOUNT_POINT - The mount location of the volume you wish to snapshot. (E.g. /ebs)"
-  echo "          DB_TYPE - The type of database on the EBS volume. Accepts 'mysql' or 'mongodb'."
+  echo "          DB_TYPE - The type of database on the EBS volume. Accepts 'mysql', 'mongodb' or 'none'."
   echo "           FREEZE - Should this EBS volume be frozen before snapshotting (true/false)?"?
   echo "                    You should never freeze the root filesystem."
   echo "SHORT_DESCRIPTION - A short description which will be added as a tag to the snapshot. (optional)"
