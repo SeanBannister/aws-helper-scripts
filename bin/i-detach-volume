@@ -50,7 +50,7 @@ fi
 
 # Find the Volume ID of the device
 echo "Locating EBS Volume ID..."
-VOLUME_ID=( $(ec2-describe-volumes | grep "ATTACHMENT" | grep /dev/sdk${DEVICE: -1} | grep "attached") )
+VOLUME_ID=( $(i-describe-volumes | grep "ATTACHMENT" | grep /dev/sdk${DEVICE: -1} | grep "attached") )
 VOLUME_ID=${VOLUME_ID[1]}
 
 if [ ! $VOLUME_ID ]; then
@@ -100,7 +100,8 @@ echo
 if [ "$VOLUME_ID" ]; then
   echo "Detaching EBS Volume..."
   # Wait for EBS volume to detach before doing anything else
-  while ! ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID; do sleep 1; done
+  ec2-detach-volume $VOLUME_ID --instance $INSTANCE_ID
+  while [ ! -z "$(i-describe-volumes | grep "ATTACHMENT" | grep /dev/sdf${DEVICE: -1})" ]; do sleep 1; done
   echo
 fi
 
