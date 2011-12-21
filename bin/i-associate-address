@@ -32,7 +32,7 @@ else
     # If the Elastic IP is associated to another EC2 instance
     IPS_INSTANCE_ID=( $(ec2-describe-addresses | grep "ADDRESS" | grep $IP) )
 
-    if [ ! -z ${IPS_INSTANCE_ID[2]} ]; then
+    if [[ ${IPS_INSTANCE_ID[2]} == *i-* ]]; then
       echo "That Elastic IP is already associated to another EC2 instance (${IPS_INSTANCE_ID[2]})."
       exit
     fi
