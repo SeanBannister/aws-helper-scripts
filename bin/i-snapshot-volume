@@ -72,7 +72,7 @@ else
     echo
 
     echo "Tagging snapshot..."
-    TAG_SERVER=( $(ec2-describe-tags | grep $VOLUME_ID | grep Name | cut -f5) )
+    TAG_SERVER=( $(ec2-describe-tags | grep $VOLUME_ID | grep Server | cut -f5) )
     ec2-create-tags $SNAPSHOT_ID --tag "Server=$TAG_SERVER" --tag "Mount point=$MOUNT_POINT" --tag "Description=$SHORT_DESCRIPTION"
   fi
 fi
