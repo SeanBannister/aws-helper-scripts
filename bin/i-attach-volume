@@ -28,7 +28,7 @@ fi
 # Tag this EBS volume
 echo "Adding tags to the EBS volume..."
 INSTANCE_NAME=$(ec2-describe-tags --filter "resource-id=$INSTANCE_ID" --filter "key=Name" | cut -f5)
-ec2-create-tags $VOLUME_ID --tag "Name=$INSTANCE_NAME" --tag "Type=secondary"
+ec2-create-tags $VOLUME_ID --tag "Name=$INSTANCE_NAME" --tag "Mounted=$MOUNT_POINT"
 echo
 
 # If the user specified auto we locate the next avaliable device location
