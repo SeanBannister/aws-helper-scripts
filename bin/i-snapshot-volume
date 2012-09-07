@@ -67,7 +67,7 @@ else
     if [ "$DB_TYPE" = "mysql" ]; then DB_ARGUMENT="--mysql"; fi
     if [ "$FREEZE" = "true" ]; then FREEZE_ARGUMENT="--freeze-filesystem $MOUNT_POINT"; fi
     if [ -z "$DESCRIPTION" ]; then DESCRIPTION="-"; fi
-    SNAPSHOT_ID=$(ec2-consistent-snapshot $DB_ARGUMENT $FREEZE_ARGUMENT --region $REGION --aws-access-key-id-file /root/.ec2/access-key-id --aws-secret-access-key-file /root/.ec2/secret-access-key --description "$DESCRIPTION" $VOLUME_ID)
+    SNAPSHOT_ID=$(ec2-consistent-snapshot $DB_ARGUMENT $FREEZE_ARGUMENT --region $REGION --mysql-defaults-file /root/.my.cnf --aws-access-key-id-file /root/.ec2/access-key-id --aws-secret-access-key-file /root/.ec2/secret-access-key --description "$DESCRIPTION" $VOLUME_ID)
     echo "Snapshot ID is '$SNAPSHOT_ID'"
     echo
 
